@@ -3,7 +3,7 @@ Lazy Learning with FCA toolbox hometask
 
 Метрики качества
 
-|  |Condition positive |Condition negative |
+| 1 | Condition positive | Condition negative |
 | -- | -- | --|
 | Predicted condition positive| | |
 | Predicted condition negative| | |
