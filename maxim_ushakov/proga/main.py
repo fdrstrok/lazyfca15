@@ -52,8 +52,78 @@ def read_data1():
 
     return data_func1, label_func1
 
+
+def read_data2():
+    data_func2 = {}
+    label_func2 = {}
+    obj_index = 0
+    with open('data_sets\car.data', 'r') as input_file:
+        for row in input_file:
+            obj_index += 1
+
+            attr_list_str = row.strip('\n').split(',')
+            label_func2[obj_index] = attr_list_str[-1]
+
+            attr_set = set()
+
+            if attr_list_str[0] == 'vhigh':
+                attr_set |= {'0:m+', '0:h+', '0:v+'}
+            elif attr_list_str[0] == 'high':
+                attr_set |= {'0:m+', '0:h+', '0:h-'}
+            elif attr_list_str[0] == 'med':
+                attr_set |= {'0:m+', '0:m-', '0:h-'}
+            elif attr_list_str[0] == 'low':
+                attr_set |= {'0:l-', '0:m-', '0:h-'}
+            else:
+                print('error', attr_list_str[0])
+
+            if attr_list_str[1] == 'vhigh':
+                attr_set |= {'1:m+', '1:h+', '1:v+'}
+            elif attr_list_str[1] == 'high':
+                attr_set |= {'1:m+', '1:h+', '1:v-'}
+            elif attr_list_str[1] == 'med':
+                attr_set |= {'1:m+', '1:h-', '1:v-'}
+            elif attr_list_str[1] == 'low':
+                attr_set |= {'1:m-', '1:h-', '1:v-'}
+            else:
+                print('error', attr_list_str[1])
+
+            if attr_list_str[3] == '2':
+                attr_set |= {'3:2-', '3:4-'}
+            elif attr_list_str[3] == '4':
+                attr_set |= {'3:4+', '3:4-'}
+            elif attr_list_str[3] == 'more':
+                attr_set |= {'3:4+', '3:more+'}
+            else:
+                print('error', attr_list_str[3])
+
+            if attr_list_str[4] == 'big':
+                attr_set |= {'4:m+', '4:b+'}
+            elif attr_list_str[4] == 'med':
+                attr_set |= {'4:m+', '4:m-'}
+            elif attr_list_str[4] == 'small':
+                attr_set |= {'4:m-', '4:s-'}
+            else:
+                print('error', attr_list_str[4])
+
+            if attr_list_str[5] == 'high':
+                attr_set |= {'5:m+', '5:h+'}
+            elif attr_list_str[5] == 'med':
+                attr_set |= {'5:m+', '5:m-'}
+            elif attr_list_str[5] == 'low':
+                attr_set |= {'5:m-', '5:l-'}
+            else:
+                print('error', attr_list_str[5])
+
+            data_func2[obj_index] = attr_set.copy()
+
+    input_file.close()
+
+    return data_func2, label_func2
+
+
 percent_train = 0.8
-data, label = read_data1()
+data, label = read_data2()
 train_ind = set(random.sample(data.keys(), round(percent_train*len(data))))
 test_ind = set(data.keys()) - train_ind
 
@@ -70,11 +140,14 @@ for obj in test_ind:
     test_label[obj] = label[obj]
 
 fca = FCA(train, test, train_label)
-test_label_predict = fca.classify_test_set1()
+test_label_predict = fca.classify_test_set2()
 
 accuracy = 0
+num_classified = 0
 for obj in test_label.keys():
     if test_label[obj] == test_label_predict[obj]:
         accuracy += 1
+    if test_label_predict[obj] != 'contradictory':
+        num_classified += 1
 
-print('accuracy = ', accuracy/len(test_label))
+print('accuracy = ', accuracy, num_classified, len(test_label))

@@ -53,7 +53,7 @@ A typical board-description is
 f,f,f,f,f,f,f,f,f,f,f,f,l,f,n,f,f,t,f,f,f,f,f,f,f,t,f,f,f,f,f,f,f,t,t,n,won
 
 The names of the features do not appear in the board-descriptions.
-Instead, each feature correponds to a particular position in the
+Instead, each feature corresponds to a particular position in the
 feature-value list.  For example, the head of this list is the value
 for the feature "bkblk".  The following is the list of features, in
 the order in which their values appear in the feature-value list:
