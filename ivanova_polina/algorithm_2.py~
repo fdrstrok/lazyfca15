@@ -1,0 +1,122 @@
+import pprint
+import sys
+from numpy import *
+from functools import reduce
+
+index = sys.argv[1]
+
+q = open("train"+index+".csv", "r")
+train = [a.strip().split(",") for a in q]
+plus = [a for a in train if a[-1] == "positive"]
+minus = [a for a in train if a[-1] == "negative"]
+q.close()
+
+w = open("test"+index+".csv", "r")
+unknown = [a.strip().split(",") for a in w]
+w.close()
+
+plus = [a for a in train if a[-1] == "positive"]
+minus = [a for a in train if a[-1] == "negative"]
+
+
+cv_res = {
+ "positive_positive": 0,
+ "positive_negative": 0,
+ "negative_positive": 0,
+ "negative_negative": 0,
+ "contradictory": 0,
+}
+
+# attrib_names = [
+#  'top-left=x', 'top-left=o', 'top-left=b',
+#  'top-middle=x', 'top-middle=o', 'top-middle=b',
+#  'top-right=x', 'top-right=o', 'top-right=b',
+#  'middle-left=x', 'middle-left=o', 'middle-left=b',
+#  'middle-middle=x', 'middle-middle=o', 'middle-middle=b',
+#  'middle-right=x', 'middle-right=o', 'middle-right=b',
+#  'bottom-left=x', 'bottom-left=o', 'bottom-left=b',
+#  'bottom-middle=x', 'bottom-middle=o', 'bottom-middle=b',
+#  'bottom-right=x', 'bottom-right=o', 'bottom-right=b',
+#  'class'
+# ]
+
+attrib_names = [
+ 'top-left',
+ 'top-middle',
+ 'top-right',
+ 'middle-left',
+ 'middle-middle',
+ 'middle-right',
+ 'bottom-left',
+ 'bottom-middle',
+ 'bottom-right',
+ 'class'
+]
+
+def make_intent(example):
+    global attrib_names
+    return set([i+':'+str(k) for i, k in zip(attrib_names, example)])
+
+## Classification rule fo algorithm:
+## For test example we look at intersection of it's attributes and attributes of positive (and negative) train example.
+## If such intersection is not empty and such intersection is not contained in any negative (positive respectively)
+## example's attributes, the we increase 'positive_count' ('negative_count' )
+## The object will bw classified as 'positive' if share of 'positive_count' in 'plus_context' will be greater
+## than share of 'negative_count' in 'minus_context', as 'negative'  if share of 'positive_count' in 'plus_context'
+## will be less than share of 'negative_count' in 'minus_context' and contradictory if the difference between shares less than 0.01
+
+def check_hypothesis(context_plus, context_minus, example, threshold):
+    eintent = make_intent(example)
+    eintent.discard('class:positive')
+    eintent.discard('class:negative')
+    labels = {}
+    global cv_res
+    for e in context_plus:
+        ei = make_intent(e)
+        candidate_intent = ei & eintent
+        closure = [make_intent(i) for i in context_minus if make_intent(i).issuperset(candidate_intent)]
+        closure_size = len([i for i in closure if len(i)])
+        if len(candidate_intent) > 0 and closure_size == 0:
+            labels['positive_count'] = labels.get('positive_count',0) + 1
+    for e in context_minus:
+        ei = make_intent(e)
+        candidate_intent = ei & eintent
+        closure = [ make_intent(i) for i in context_plus if make_intent(i).issuperset(candidate_intent)]
+        closure_size = len([i for i in closure if len(i)])
+        if len(candidate_intent) > 0 and closure_size == 0:
+            labels['negative_count'] = labels.get('negative_count',0) + 1
+    ## Clasification rule:
+    labels['positive_count'] = labels.get('positive_count',0) / len(context_plus)
+    labels['negative_count'] = labels.get('negative_count',0) / len(context_minus)
+    # if abs(labels['positive_count'] - labels['negative_count']) > 0.01:
+    #     labels['positive'] = labels['positive_count'] > labels['negative_count']
+    #     labels['negative'] = labels['positive_count'] < labels['negative_count']
+    # else:
+    #     labels['positive'] = True
+    #     labels['negative'] = True
+    labels['positive'] = labels['positive_count'] > threshold
+    labels['negative'] = labels['negative_count'] > threshold
+    #print(eintent)
+    #print(labels)
+    if labels.get("positive",False) and labels.get("negative",False):
+       cv_res["contradictory"] += 1
+       return
+    if example[-1] == "positive" and labels.get("positive",False):
+       cv_res["positive_positive"] += 1
+    if example[-1] == "negative" and labels.get("positive",False):
+       cv_res["negative_positive"] += 1
+    if example[-1] == "positive" and labels.get("negative",False):
+       cv_res["positive_negative"] += 1
+    if example[-1] == "negative" and labels.get("negative",False):
+       cv_res["negative_negative"] += 1
+    return cv_res
+
+
+#threshold = 0.1
+#unknown = unknown[1:]
+# i = 0
+# for elem in unknown:
+#     print("done ", i)
+#     i += 1
+#     check_hypothesis(plus, minus, elem, threshold)
+# print(cv_res)
