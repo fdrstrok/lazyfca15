@@ -138,7 +138,7 @@ class FCA:
         for label, obj_set in self.category.items():
             print(label)
             extents[label], intents[label] = self.calculate_hypothesis(label, 0, max_part_contradictions, int(min_part_support*len(obj_set)))
-            print(len(intents))
+            print(len(intents[label]))
 
         for obj, attr_set in self.test.items():
             num_objects = {}

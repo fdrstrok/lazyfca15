@@ -122,8 +122,8 @@ def read_data2():
     return data_func2, label_func2
 
 
-percent_train = 0.8
-data, label = read_data2()
+percent_train = 0.7
+data, label = read_data1()
 train_ind = set(random.sample(data.keys(), round(percent_train*len(data))))
 test_ind = set(data.keys()) - train_ind
 
@@ -140,7 +140,7 @@ for obj in test_ind:
     test_label[obj] = label[obj]
 
 fca = FCA(train, test, train_label)
-test_label_predict = fca.classify_test_set2()
+test_label_predict = fca.classify_test_set1(0, 1, 0.51)
 
 accuracy = 0
 num_classified = 0
@@ -150,4 +150,4 @@ for obj in test_label.keys():
     if test_label_predict[obj] != 'contradictory':
         num_classified += 1
 
-print('accuracy = ', accuracy, num_classified, len(test_label))
+print('accuracy = ', accuracy / num_classified, num_classified / len(test_label))
