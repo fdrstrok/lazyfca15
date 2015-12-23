@@ -22,15 +22,17 @@ plus = [a for a in train if a[-1] == "positive"]
 minus = [a for a in train if a[-1] == "negative"]
 
 
-# cv_res = {
-#  "positive_positive": 0,
-#  "positive_negative": 0,
-#  "negative_positive": 0,
-#  "negative_negative": 0,
-#  "contradictory": 0,
-# }
+cv_res = {
+ "positive_positive": 0,
+ "positive_negative": 0,
+ "negative_positive": 0,
+ "negative_negative": 0,
+ "contradictory": 0,
+}
 
 algorithm_index =  sys.argv[2]
+unknown = unknown[1:]
+
 if algorithm_index == '1':
     print("Algorithm 1")
     threshold = 0.13
@@ -39,7 +41,10 @@ if algorithm_index == '1':
     for elem in unknown:
         print("done ", i)
         i += 1
-        cv_res = check_hypothesis_1(plus, minus, elem, threshold)
+        cv_res_temp = check_hypothesis_2(plus, minus, elem, threshold, cv_res)
+        if cv_res_temp is not None:
+            cv_res = cv_res_temp
+        print(cv_res)
     print(cv_res)
 elif algorithm_index == '2':
     print("Algorithm 2")
@@ -49,7 +54,9 @@ elif algorithm_index == '2':
     for elem in unknown:
         print("done ", i)
         i += 1
-        cv_res = check_hypothesis_2(plus, minus, elem, threshold)
+        cv_res_temp = check_hypothesis_2(plus, minus, elem, threshold, cv_res)
+        if cv_res_temp is not None:
+            cv_res = cv_res_temp
     print(cv_res)
 else:
     print("Add number 1 or 2 of algorithm in configuration")
