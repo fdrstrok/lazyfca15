@@ -4,8 +4,8 @@ setwd('C:/hse_homeworks_git/FCA homework/hw')
 data<-read.table('hepatitis.data', sep=',', na.strings='?')
 data<-na.omit(data)
 names(data)<-c('Class','age','sex','steroid','antivirals','fatigue','malaise','anorexia','liver_big',
-         'liver_firm','spleen_palpable','spiders','ascites','vaices','bilirubin','alk_phosphate',
-         'sgot','albumin','protime','histology')
+               'liver_firm','spleen_palpable','spiders','ascites','vaices','bilirubin','alk_phosphate',
+               'sgot','albumin','protime','histology')
 #steroid-на стероидах
 #antivirals-принимает антивирусные
 #fatigue - слабость
@@ -91,11 +91,15 @@ for (i in 1:nrow(data1)){if (data1[i,'anorexia']==1 & data1[i,'fatigue']==1 & da
 #connecting all
 data1<-cbind(data1, data1n, data_scale)
 #parameter selection
-parameter2<-3 #голосов за один вариант в 2 раза больше чем в другой
+parameter2<-1.1 #голосов за один вариант в 2 раза больше чем в другой
 #10, 0.875, fpr=0.38
 #1.1, 0.85, fpr=0.153
 #cross validation
 library(caret)
+
+parameter3<-0 #0.51 (if there is equal data)
+parameter4<-0.3
+
 flds <- createFolds(c(1:nrow(data1)), k = 5, list = TRUE, returnTrain = FALSE)
 accuracy<-c()
 recall<-c()
@@ -105,66 +109,70 @@ cl<-makeCluster(no_cores)
 registerDoParallel(cl)
 time<-Sys.time()
 acc<-foreach(r=1:5,.combine='c') %do% {
-      test<-data1[flds[[r]],]
-      train<-data1[-flds[[r]],]
-      pos_context<-split(train, f = train$Class)$`1`  #live
-      #pos_context<-pos_context[1:round(nrow(pos_context)/6,0),]
-      neg_context<-split(train, f = train$Class)$`0`  #die
-      #classifying
-      pos<-rep(0,nrow(test))
-      neg<-rep(0,nrow(test))
-      res_p<-c()
-      res_n<-c()
-      pos<-foreach(i=1:nrow(test), .combine = 'c') %:% 
-        #positive
-        foreach(j=1:nrow(pos_context), .combine = 'sum') %dopar% {
-          intersection<-test[i,2:ncol(test)]*pos_context[j,2:ncol(pos_context)]
-          for (k in 1:nrow(neg_context)){
-            res_p[k]<-all(intersection*neg_context[k,2:ncol(neg_context)]==intersection)
-          }
-          if (sum(res_p)==0){1}
-        }
-      neg<-foreach(i=1:nrow(test), .combine = 'c') %:% 
-        #negative
-        foreach(j=1:nrow(neg_context), .combine = 'sum') %dopar% {
-          intersection<-test[i,2:ncol(test)]*neg_context[j,2:ncol(neg_context)]
-          for (k in 1:nrow(pos_context)){
-            res_n[k]<-all(intersection*pos_context[k,2:ncol(pos_context)]==intersection)
-          }
-          if (sum(res_n)==0){1}
-        }
-      
-      #prediction
-      proportion<-data.frame()
-      for (i in 1:nrow(test)){
-        proportion[1,i]<-neg[i]/pos[i];
-        proportion[2,i]<-pos[i]/neg[i];
-        if (proportion[1,i]>=parameter2 | proportion[2,i]>=parameter2 | proportion[1,i]==0 | proportion[2,i]==0){
-          
-        }else{neg[i]<-1; pos[i]<-0}
+  test<-data1[flds[[r]],]
+  train<-data1[-flds[[r]],]
+  pos_context<-split(train, f = train$Class)$`1`  #live
+  #pos_context<-pos_context[1:round(nrow(pos_context)/5,0),]
+  neg_context<-split(train, f = train$Class)$`0`  #die
+  #classifying
+  pos<-rep(0,nrow(test))
+  neg<-rep(0,nrow(test))
+  res_p<-c()
+  res_n<-c()
+  pos<-foreach(i=1:nrow(test), .combine = 'c') %:% 
+    #positive
+    foreach(j=1:nrow(pos_context), .combine = 'sum') %dopar% {
+      intersection<-test[i,2:ncol(test)]*pos_context[j,2:ncol(pos_context)]
+      #size of intersection
+      m1<-sum(intersection)/length(intersection)
+      for (k in 1:nrow(neg_context)){
+        res_p[k]<-all(intersection*neg_context[k,2:ncol(neg_context)]==intersection)
       }
-      for (i in 1:nrow(test)){
-      if ((pos-neg)[i]>0){test[i,'class_predicted']<-1}else{test[i,'class_predicted']<-0}
+      if (sum(res_p)<=parameter3 & m1>=parameter4){1}
+    }
+  neg<-foreach(i=1:nrow(test), .combine = 'c') %:% 
+    #negative
+    foreach(j=1:nrow(neg_context), .combine = 'sum') %dopar% {
+      intersection<-test[i,2:ncol(test)]*neg_context[j,2:ncol(neg_context)]
+      #size of intersection
+      m1<-sum(intersection)/length(intersection)
+      for (k in 1:nrow(pos_context)){
+        res_n[k]<-all(intersection*pos_context[k,2:ncol(pos_context)]==intersection)
       }
+      if (sum(res_n)<=parameter3 & m1>=parameter4){1}
+    }
+  
+  #prediction
+  proportion<-data.frame()
+  for (i in 1:nrow(test)){
+    proportion[1,i]<-neg[i]/pos[i];
+    proportion[2,i]<-pos[i]/neg[i];
+    if (proportion[1,i]>=parameter2 | proportion[2,i]>=parameter2 | proportion[1,i]==0 | proportion[2,i]==0){
       
-      #accuracy
-      u = union(0, 1)
-      t = table(factor(test$class_predicted, u), factor(test$Class, u))
-      true_positive<-t[1,1]
-      true_negative<-t[2,2]
-      false_positive<-t[1,2]
-      false_negative<-t[2,1]
-      true_positive_rate<-true_positive/(sum(t[,1]))
-      true_negative_rate<-true_negative/sum(t[,2])
-      false_positive_rate<-false_positive/sum(t[,2])
-      false_discovery_rate<-false_positive/sum(t[1,])
-      negative_predictive_value<-true_negative/sum(t[2,])
-      positive_predictive_value<-true_positive/sum(t[1,])
-      accuracy[r]<-(true_positive+true_negative)/nrow(test);
-      #recall[r]<-true_positive_rate
-      #precision[r]<-positive_predictive_value
-      #mean(accuracy);
-      accuracy[r];
+    }else{neg[i]<-1; pos[i]<-0}
+  }
+  for (i in 1:nrow(test)){
+    if ((pos-neg)[i]>0){test[i,'class_predicted']<-1}else{test[i,'class_predicted']<-0}
+  }
+  
+  #accuracy
+  u = union(0, 1)
+  t = table(factor(test$class_predicted, u), factor(test$Class, u))
+  true_positive<-t[1,1]
+  true_negative<-t[2,2]
+  false_positive<-t[1,2]
+  false_negative<-t[2,1]
+  true_positive_rate<-true_positive/(sum(t[,1]))
+  true_negative_rate<-true_negative/sum(t[,2])
+  false_positive_rate<-false_positive/sum(t[,2])
+  false_discovery_rate<-false_positive/sum(t[1,])
+  negative_predictive_value<-true_negative/sum(t[2,])
+  positive_predictive_value<-true_positive/sum(t[1,])
+  accuracy[r]<-(true_positive+true_negative)/nrow(test);
+  #recall[r]<-true_positive_rate
+  #precision[r]<-positive_predictive_value
+  #mean(accuracy);
+  accuracy[r];
 }
 stopImplicitCluster()
 Sys.time()-time
