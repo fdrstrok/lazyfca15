@@ -27,7 +27,18 @@ cv_res = {
  "contradictory": 0,
 }
 
-
+# attrib_names = [
+#  'top-left=x', 'top-left=o', 'top-left=b',
+#  'top-middle=x', 'top-middle=o', 'top-middle=b',
+#  'top-right=x', 'top-right=o', 'top-right=b',
+#  'middle-left=x', 'middle-left=o', 'middle-left=b',
+#  'middle-middle=x', 'middle-middle=o', 'middle-middle=b',
+#  'middle-right=x', 'middle-right=o', 'middle-right=b',
+#  'bottom-left=x', 'bottom-left=o', 'bottom-left=b',
+#  'bottom-middle=x', 'bottom-middle=o', 'bottom-middle=b',
+#  'bottom-right=x', 'bottom-right=o', 'bottom-right=b',
+#  'class'
+# ]
 
 attrib_names = [
  'top-left',
@@ -54,12 +65,12 @@ def make_intent(example):
 ## than share of 'negative_count' in 'minus_context', as 'negative'  if share of 'positive_count' in 'plus_context'
 ## will be less than share of 'negative_count' in 'minus_context' and contradictory if the difference between shares less than 0.01
 
-def check_hypothesis(context_plus, context_minus, example, threshold):
+def check_hypothesis(context_plus, context_minus, example, threshold, cv_res):
     eintent = make_intent(example)
     eintent.discard('class:positive')
     eintent.discard('class:negative')
     labels = {}
-    global cv_res
+    #global cv_res
     for e in context_plus:
         ei = make_intent(e)
         candidate_intent = ei & eintent
@@ -73,6 +84,46 @@ def check_hypothesis(context_plus, context_minus, example, threshold):
         closure = [ make_intent(i) for i in context_plus if make_intent(i).issuperset(candidate_intent)]
         closure_size = len([i for i in closure if len(i)])
         if len(candidate_intent) > 0 and closure_size == 0:
+            labels['negative_count'] = labels.get('negative_count',0) + 1
+    ## Clasification rule:
+    labels['positive_count'] = labels.get('positive_count',0) / len(context_plus)
+    labels['negative_count'] = labels.get('negative_count',0) / len(context_minus)
+    labels['positive'] = labels['positive_count'] > threshold
+    labels['negative'] = labels['negative_count'] > threshold
+    #print(eintent)
+    #print(labels)
+    if labels.get("positive",False) and labels.get("negative",False):
+       cv_res["contradictory"] += 1
+       return
+    if example[-1] == "positive" and labels.get("positive",False):
+       cv_res["positive_positive"] += 1
+    if example[-1] == "negative" and labels.get("positive",False):
+       cv_res["negative_positive"] += 1
+    if example[-1] == "positive" and labels.get("negative",False):
+       cv_res["positive_negative"] += 1
+    if example[-1] == "negative" and labels.get("negative",False):
+       cv_res["negative_negative"] += 1
+    return cv_res
+
+def check_hypothesis_modify(context_plus, context_minus, example, threshold, cv_res):
+    eintent = make_intent(example)
+    eintent.discard('class:positive')
+    eintent.discard('class:negative')
+    labels = {}
+    #global cv_res
+    for e in context_plus:
+        ei = make_intent(e)
+        candidate_intent = ei & eintent
+        closure = [make_intent(i) for i in context_minus if make_intent(i).issuperset(candidate_intent)]
+        closure_size = len([i for i in closure if len(i)])
+        if len(candidate_intent) > 0 and closure_size < 0.05*len(context_plus):
+            labels['positive_count'] = labels.get('positive_count',0) + 1
+    for e in context_minus:
+        ei = make_intent(e)
+        candidate_intent = ei & eintent
+        closure = [ make_intent(i) for i in context_plus if make_intent(i).issuperset(candidate_intent)]
+        closure_size = len([i for i in closure if len(i)])
+        if len(candidate_intent) > 0 and closure_size < 0.05*len(context_minus):
             labels['negative_count'] = labels.get('negative_count',0) + 1
     ## Clasification rule:
     labels['positive_count'] = labels.get('positive_count',0) / len(context_plus)
@@ -101,11 +152,12 @@ def check_hypothesis(context_plus, context_minus, example, threshold):
     return cv_res
 
 
-#threshold = 0.1
-#unknown = unknown[1:]
+
+# threshold = 0.1
+# unknown = unknown[1:]
 # i = 0
 # for elem in unknown:
 #     print("done ", i)
 #     i += 1
-#     check_hypothesis(plus, minus, elem, threshold)
+#     cv_res = check_hypothesis(plus, minus, elem, threshold)
 # print(cv_res)
