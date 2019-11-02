@@ -11,7 +11,7 @@ To solve the problem you are given the framework base on "generators"
 # "Generators" method
 You split your train data into two parts: C+ - context with "+" examples, C- - context with "-" examples.
 To classify object g you have to follow the procedure:
-1) for each object from C+ $$g_i^+$$
+1) for each object from C+ <img src="https://latex.codecogs.com/gif.latex?g_i%5E&plus;"/>
 
 
 # lazyfca15
