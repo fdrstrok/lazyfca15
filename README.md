@@ -1,4 +1,4 @@
-#English version
+# English version
 _Russian version below_
 We are solving the task of binary classification. It means that there are only 2 possible values for target class. Usually they are denoted by signs + and -. You are given train set, for which you know its class value.
 On the other hand, you are given test dataset: there are examples with features, but without class label.
