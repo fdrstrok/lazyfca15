@@ -11,7 +11,12 @@ To solve the problem you are given the framework base on "generators"
 # "Generators" method
 You split your train data into two parts: C+ - context with "+" examples, C- - context with "-" examples.
 To classify object g you have to follow the procedure:
-1) for each object from C+ <img src="https://latex.codecogs.com/gif.latex?g_i%5E&plus;"/>
+1) for each object from C+ <img src="https://latex.codecogs.com/gif.latex?g_i%5E&plus;"/> you have to calculate intersection with the description of the object to classify (g'); and check, whether this description is presented in any example from C-
+2) do the same thing vice versa for C- - for each object description from C- calculate intersection and check whether this intersection is common with any object description from C+
+
+You will have to explore possible step functions for classification.
+
+For instance: you classify object as +, if for intersection with examples from C+ you have no more than x counter-examples; and for descriptions with no counterexamples the size of intersection (cardinality) is at least min_cardinality 
 
 
 # lazyfca15
