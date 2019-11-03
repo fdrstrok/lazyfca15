@@ -1,0 +1,9 @@
+V1,V2,V3,V4,V5,V6,V7,V8,V9,V10
+x,x,x,x,o,o,o,x,o,positive
+x,x,x,x,o,b,o,b,o,positive
+x,x,x,o,o,x,o,x,o,positive
+x,x,x,o,o,b,x,o,b,positive
+o,x,x,o,o,o,x,b,x,negative
+o,x,x,o,o,o,b,x,x,negative
+o,x,o,b,o,x,o,x,x,negative
+o,x,b,x,o,x,b,b,o,negative
