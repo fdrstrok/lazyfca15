@@ -1,0 +1,182 @@
+import pandas as pd
+import numpy as np
+df = pd.read_csv('data.csv')
+given_data = df.to_numpy()
+N = round(given_data.size/10)
+M = 10
+def sum_intersection_features (context, g):
+  sum = 0
+  for elem in context:
+    for i in range(18):
+      sum += elem[i]*g[i]
+  return sum
+
+def sum_intersection_features_ratio (context, g):
+  sum = 0
+  N = 0
+  for elem in context:
+    N+= 1
+    for i in range(18):
+      sum += elem[i]*g[i]
+  return sum/N
+
+def sum_support (first_context, second_context, g):
+  sum = 0
+  N=0
+  for elem in first_context:
+    temp = elem*g
+    for elem1 in second_context:
+      N+=1
+      elem1_has_features = 1
+      for i in range(18):
+        if (temp[i] > elem1[i]):
+           elem1_has_features = 0
+      if elem1_has_features:
+         sum+=1
+  return sum/N
+  data = np.zeros((N,19)) 
+for i in range(N): #теперь за каждую клетку отвечают две переменные, есть крестик и есть нолик
+  for j in range(9):
+    if (given_data[i][j] == 'x'):
+      data[i][2*j] = 1
+    if (given_data[i][j] == 'o'):
+      data[i][2*j + 1] = 1
+  if (given_data[i][9] == 'positive'):
+    data[i][18] = 1
+    np.random.seed(42)
+np.random.shuffle(data)
+train_context = data[:round(N*0.8)][:]
+plus_context = [a for a in train_context if a[18] == 1]
+minus_context = [a for a in train_context if a[18] == 0]
+test_context = data[round(N*0.8):][:]
+
+C=0.5
+prev_acc = 0
+for k in range(20):
+  false_positive = 0
+  false_negative = 0
+  for elem in test_context:
+    if (sum_intersection_features_ratio(plus_context, elem) > (C * sum_intersection_features_ratio(minus_context, elem))):
+      if (elem[18] == 0):
+        false_positive += 1
+    else:
+      if (elem[18] == 1):
+        false_negative += 1
+  print ('acc', C, ':', 1 - (false_positive+false_negative)*19/test_context.size)
+  print ('fp:', false_positive)
+  print ('fn:', false_negative)
+  C+=0.05
+l = 0.85
+r = 0.9
+train_context = data[:round(N*0.8)][:]
+plus_context = [a for a in train_context if a[18] == 1]
+minus_context = [a for a in train_context if a[18] == 0]
+test_context = data[round(N*0.8):][:]
+
+false_positive = 0
+false_negative = 0
+for elem in test_context:
+  if (sum_intersection_features_ratio(plus_context, elem) > (l * sum_intersection_features_ratio(minus_context, elem))):
+    if (elem[18] == 0):
+      false_positive += 1
+  else:
+    if (elem[18] == 1):
+      false_negative += 1
+acc_l = 1 - (false_positive+false_negative)*19/test_context.size
+print ('acc', l, ':', acc_l)
+print ('fp:', false_positive)
+print ('fn:', false_negative)
+
+false_positive = 0
+false_negative = 0
+for elem in test_context:
+  if (sum_intersection_features_ratio(plus_context, elem) > (r * sum_intersection_features_ratio(minus_context, elem))):
+    if (elem[18] == 0):
+      false_positive += 1
+  else:
+    if (elem[18] == 1):
+      false_negative += 1
+acc_r = 1 - (false_positive+false_negative)*19/test_context.size
+print ('acc', r, ':', acc_r)
+print ('fp:', false_positive)
+print ('fn:', false_negative)
+
+for k in range(20):
+  false_positive = 0
+  false_negative = 0
+  for elem in test_context:
+    if (sum_intersection_features_ratio(plus_context, elem) > ((l+r)/2 * sum_intersection_features_ratio(minus_context, elem))):
+      if (elem[18] == 0):
+        false_positive += 1
+    else:
+      if (elem[18] == 1):
+        false_negative += 1
+  print ((l+r)/2)
+  print ('acc', k, ':', 1 - (false_positive+false_negative)*19/test_context.size)
+  print ('acc_l:', acc_l)
+  print ('acc_r', acc_r)
+  if (acc_l < acc_r):
+    l = (l+r)/2
+    acc_l = 1 - (false_positive+false_negative)*19/test_context.size
+  else:
+    r = (r+l)/2
+    acc_r = 1 - (false_positive+false_negative)*19/test_context.size
+print ((l + r)/2)
+arr = np.zeros(M)
+for k in range(M-1):
+  train_context = data[round(N*k/M):round(N*(k+1)/M)][:]
+  test_context = data[round(N*(k+1)/M):round(N*(k+2)/M)][:]
+  plus_context = [a for a in train_context if a[18] == 1]
+  minus_context = [a for a in train_context if a[18] == 0]
+  #train_context = data[:round(N*0.4)][:]
+  #plus_context = [a for a in train_context if a[18] == 1]
+  #minus_context = [a for a in train_context if a[18] == 0]
+  #test_context = data[round(N*0.4):round(N*0.5)][:]
+  
+  C=0
+  prev_acc = 0
+  for k in range(5):
+    false_positive = 0
+    false_negative = 0
+    for elem in test_context:
+      if (sum_support(minus_context, plus_context, elem) > (C * sum_support(plus_context, minus_context, elem))):
+        if (elem[18] == 0):
+          false_positive += 1
+      else:
+        if (elem[18] == 1):
+          false_negative += 1
+    accuracy = 1 - (false_positive+false_negative)*19/test_context.size
+   # print ('acc', C, ':', accuracy)
+   # print ('fp:', false_positive)
+   # print ('fn:', false_negative)
+    C+=0.1
+    arr[k] += accuracy
+arr/=(M-1)
+sumacc=0
+for k in range(M-1):
+  train_context = data[round(N*k/M):round(N*(k+1)/M)][:]
+  test_context = data[round(N*(k+1)/M):round(N*(k+2)/M)][:]
+  plus_context = [a for a in train_context if a[18] == 1]
+  minus_context = [a for a in train_context if a[18] == 0]
+  #train_context = data[:round(N*0.4)][:]
+  #plus_context = [a for a in train_context if a[18] == 1]
+  #minus_context = [a for a in train_context if a[18] == 0]
+  #test_context = data[round(N*0.4):round(N*0.5)][:]
+  C=0.8562500238418579
+  prev_acc = 0
+  false_positive = 0
+  false_negative = 0
+  for elem in test_context:
+    if (sum_intersection_features_ratio(plus_context, elem) > (C * sum_intersection_features_ratio(minus_context, elem))):
+      if (elem[18] == 0):
+        false_positive += 1
+    else:
+      if (elem[18] == 1):
+        false_negative += 1
+  accuracy = 1 - (false_positive+false_negative)*19/test_context.size
+  print ('acc', k, ':', accuracy)
+  print ('fp:', false_positive)
+  print ('fn:', false_negative)
+  sumacc+=accuracy
+sumacc/= (M-1) 
+print('Average acc:', sumacc)
